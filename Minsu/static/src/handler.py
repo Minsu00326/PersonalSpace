@@ -1,79 +1,65 @@
-import os, json, hashlib
-import joblib
+# handler.py — use only artifacts/pipeline.pkl (preprocessor + model)
+
+import json, hashlib
 from pathlib import Path
-from extract_features import extract_features_from_path
+import joblib
+from extract_features import extract_features_from_path  # your feature extractor
 
-# === 경로 설정 ===
-BASE_DIR   = Path(__file__).resolve().parent.parent  
-MODEL_PATH = BASE_DIR / "artifacts" / "static_model.pkl"
-YARA_PATH  = BASE_DIR / "rules" / "packer.yar"
-PE_PATH    = Path("/test/test.exe")  # 경로 수정 필요
+# === paths ===
+BASE_DIR      = Path(__file__).resolve().parent.parent
+PIPELINE_PATH = BASE_DIR / "artifacts" / "pipeline.pkl"
+YARA_PATH     = BASE_DIR / "rules" / "packer.yar"
 
-# --- 해시 함수 ---
-def file_hashes(file_path: Path):
-    h_md5 = hashlib.md5()
-    h_sha256 = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        while chunk := f.read(8192):
-            h_md5.update(chunk)
-            h_sha256.update(chunk)
-    return h_md5.hexdigest(), h_sha256.hexdigest()
+# optional default file for local test
+PE_PATH       = Path("/home/alstn/SerialNumberDetectionTool.exe")
 
-# --- 메인 ---
+# --- file hashes ---
+def file_hashes(p: Path):
+    h1, h2 = hashlib.md5(), hashlib.sha256()
+    with open(p, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h1.update(chunk); h2.update(chunk)
+    return h1.hexdigest(), h2.hexdigest()
+
+# --- lazy load pipeline ---
+_PIPE = None
+def get_pipeline():
+    global _PIPE
+    if _PIPE is None:
+        if not PIPELINE_PATH.exists():
+            raise FileNotFoundError(f"pipeline.pkl not found: {PIPELINE_PATH}")
+        _PIPE = joblib.load(PIPELINE_PATH)  # contains preprocessor + model
+    return _PIPE
+
+# --- local run ---
 if __name__ == "__main__":
-    model = joblib.load(MODEL_PATH)
-
-    # 피처 추출
-    X_one = extract_features_from_path(str(PE_PATH), yara_rules_path=str(YARA_PATH))
-
-    # 예측
-    prob = float(model.predict_proba(X_one)[0, 1])
-    label = int(prob >= 0.5)
-
-    # 해시 계산
+    pipe = get_pipeline()
+    X = extract_features_from_path(str(PE_PATH), yara_rules_path=str(YARA_PATH))
+    prob = float(pipe.predict_proba(X)[0, 1]); label = int(prob >= 0.5)
     md5, sha256 = file_hashes(PE_PATH)
+    X_proc = pipe.named_steps["preprocessor"].transform(X)
 
-    # 결과 JSON
-    result = {
+    out = {
         "file": str(PE_PATH),
-        "hashes": {
-            "md5": md5,
-            "sha256": sha256,
-        },
-        "prediction": {
-            "label": label,
-            "prob": prob,
-            "prob_percent": f"{prob*100:.2f}%",
-        },
-        "features": X_one.to_dict(orient="records")[0],
+        "hashes": {"md5": md5, "sha256": sha256},
+        "prediction": {"label": label, "prob": prob, "prob_percent": f"{prob*100:.2f}%"},
+        "features_original": X.to_dict(orient="records")[0],
+        "features_processed": X_proc.to_dict(orient="records")[0],
     }
+    print(json.dumps(out, indent=2, ensure_ascii=False))
 
-    print(json.dumps(result, indent=2, ensure_ascii=False))
-
-
-# === AWS Lambda 핸들러 ===
+# --- AWS Lambda handler ---
 def lambda_handler(event, context):
-    model = joblib.load(MODEL_PATH)
-
-    file_path = Path(event.get("file_path", PE_PATH))  # 기본값: 테스트용 파일
-
-    X_one = extract_features_from_path(str(file_path), yara_rules_path=str(YARA_PATH))
-    prob  = float(model.predict_proba(X_one)[0, 1])
-    label = int(prob >= 0.5)
+    pipe = get_pipeline()
+    file_path = Path(event.get("file_path", str(PE_PATH)))
+    X = extract_features_from_path(str(file_path), yara_rules_path=str(YARA_PATH))
+    prob = float(pipe.predict_proba(X)[0, 1]); label = int(prob >= 0.5)
     md5, sha256 = file_hashes(file_path)
 
-    result = {
+    out = {
         "file": str(file_path),
-        "hashes": {
-            "md5": md5,
-            "sha256": sha256,
-        },
-        "prediction": {
-            "label": label,                     # 0=정상, 1=악성
-            "prob": prob,                       # 원래 확률값 (0~1)
-            "prob_percent": f"{prob*100:.2f}%", # 퍼센트 문자열 (예: "0.78%")
-        },
-        "features": X_one.to_dict(orient="records")[0],
+        "hashes": {"md5": md5, "sha256": sha256},
+        "prediction": {"label": label, "prob": prob, "prob_percent": f"{prob*100:.2f}%"},
+        "features_original": X.to_dict(orient="records")[0],
     }
-
-    return {"statusCode": 200, "body": json.dumps(result, ensure_ascii=False)}
+    return {"statusCode": 200, "body": json.dumps(out, ensure_ascii=False)}

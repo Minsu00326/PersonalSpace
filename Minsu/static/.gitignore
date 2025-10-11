@@ -27,7 +27,6 @@ build/
 *.whl
 
 # === 데이터/모델 산출물 ===
-*.pkl
 *.joblib
 *.parquet
 *.csv

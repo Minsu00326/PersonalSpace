@@ -9,7 +9,7 @@
 ```text
 static/
 ├─ artifacts/                # 모델 및 피처 관련 산출물
-│  ├─ model.pkl              # 학습된 XGBoost 모델 (Pipeline 포함)
+│  ├─ pipeline.pkl           # 전처리 및 학습된 XGBoost 모델 파이프라인 
 │  └─ feature_list.txt       # 최종 피처 목록 (순서 고정)
 │
 ├─ src/
@@ -39,56 +39,55 @@ python src/handler.py
 ## 예측 결과 예시
 ```json
 {
-  "file": "/home/alstn/Zoom.exe",
+  "file": "/home/alstn/SerialNumberDetectionTool.exe",
   "hashes": {
-    "md5": "b70c9349cfe93ae6f6d06f6410d9c1c6",
-    "sha256": "ca3e8e557888186d1618190838d1d883f192eb5a363750203183916bb95513af"
+    "md5": "72a03d0cd0bb0745704bbb02bb161187",
+    "sha256": "e272684dbbd922d828968bbc7db79fe495fbc5cdad25f91bddb6a603558278fd"
   },
   "prediction": {
-    "label": 0,
-    "prob": 0.006077801808714867,
-    "prob_percent": "0.61%"
+    "label": 1,
+    "prob": 0.9463813900947571,
+    "prob_percent": "94.64%"
   },
-  "features": {
-    "DllCharacteristics": 49504,
+  "features_original": {
+    "DllCharacteristics": 34112,
     "SizeOfStackReserve": 1048576,
-    "AddressOfEntryPoint": 120432,
-    "Characteristics": 34,
-    "SizeOfHeaders": 1024,
-    "SizeOfInitializedData": 290304,
+    "AddressOfEntryPoint": 94062,
+    "Characteristics": 258,
+    "SizeOfHeaders": 512,
+    "SizeOfInitializedData": 2048,
     "SizeOfUninitializedData": 0,
     "SizeOfStackCommit": 4096,
-    "SizeOfCode": 128000,
-    "BaseOfCode": 4096,
-    "SectionAlignment": 4096,
+    "SizeOfCode": 86016,
+    "BaseOfCode": 8192,
+    "SectionAlignment": 8192,
     "FileAlignment": 512,
-    "ImageBase": 5368709120,
+    "ImageBase": 4194304,
     "PointerToSymbolTable": 0,
     "NumberOfSymbols": 0,
-    "imports_total": 478,
-    "imports_unique": 477,
-    "import_dlls_unique": 32,
-    "imports_max_per_dll": 149,
-    "strings_avg_len": 13.329478138222848,
-    "strings_base64_blob_count": 150,
+    "imports_total": 1,
+    "imports_unique": 1,
+    "import_dlls_unique": 1,
+    "imports_max_per_dll": 1,
+    "strings_avg_len": 34.50093574547723,
+    "strings_base64_blob_count": 483,
     "e_minalloc": 0,
     "e_ovno": 0,
     "MinorImageVersion": 0,
     "MajorImageVersion": 0,
-    "MajorOperatingSystemVersion": 5,
-    "MinorSubsystemVersion": 2,
-    "MajorLinkerVersion": 14,
-    "NumberOfSections": 6,
-    "Machine": 34404,
-    "imports_entropy": 5.185976953802916,
-    "strings_entropy": 5.8471035201171,
-    "strings_printable_ratio": 0.1069905084500154,
-    "yara_has_packer_generic": 0,
-    "yara_count_packer": 0,
+    "MajorOperatingSystemVersion": 4,
+    "MinorSubsystemVersion": 0,
+    "MajorLinkerVersion": 11,
+    "NumberOfSections": 3,
+    "Machine": 332,
+    "imports_entropy": 3.459431618637298,
+    "strings_entropy": 5.694874297603873,
+    "strings_printable_ratio": 0.5755182317682318,
+    "yara_has_packer_generic": 1,
+    "yara_count_packer": 1,
     "yara_has_upx_like": 0,
     "yara_has_mpress_like": 0,
     "yara_has_aspack_like": 0,
-    "e_lfanew": 280
+    "e_lfanew": 128
   }
-}
 ```
